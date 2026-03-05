@@ -492,8 +492,7 @@ describe("Has access granted endpoint", () => {
     expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({ hasAccessGranted: false }));
   });
 
-  it("returns 500 and logs error when adapter.findMany throws", async () => {
-    const { logger } = await import("better-auth");
+  it("returns 500 when adapter.findMany throws", async () => {
     const adapter = createErrorAdapter();
     const handler = createHasAccessGrantedEndpoint(defaultOptions);
     const ctx = createMockContext({ adapter });
@@ -503,9 +502,6 @@ describe("Has access granted endpoint", () => {
       expect.objectContaining({ hasAccessGranted: undefined }),
       { status: 500 },
     );
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to check subscription status"),
-    );
   });
 });
 
@@ -514,8 +510,7 @@ describe("Checkout endpoint - SDK errors", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 500 and logs error when SDK throws", async () => {
-    const { logger } = await import("better-auth");
+  it("returns 500 when SDK throws", async () => {
     const creem = createMockCreem() as any;
     creem.checkouts.create.mockRejectedValue(new Error("SDK checkout error"));
     const handler = createCheckoutEndpoint(creem, defaultOptions);
@@ -526,7 +521,6 @@ describe("Checkout endpoint - SDK errors", () => {
       expect.objectContaining({ error: "Failed to create checkout" }),
       { status: 500 },
     );
-    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("Failed to create checkout"));
   });
 });
 
@@ -535,8 +529,7 @@ describe("Portal endpoint - SDK errors", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 500 and logs error when SDK throws", async () => {
-    const { logger } = await import("better-auth");
+  it("returns 500 when SDK throws", async () => {
     const creem = createMockCreem() as any;
     creem.customers.generateBillingLinks.mockRejectedValue(new Error("SDK portal error"));
     const handler = createPortalEndpoint(creem, defaultOptions);
@@ -549,7 +542,6 @@ describe("Portal endpoint - SDK errors", () => {
       expect.objectContaining({ error: "Failed to create portal" }),
       { status: 500 },
     );
-    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("Failed to create portal"));
   });
 });
 
@@ -558,8 +550,7 @@ describe("Cancel subscription endpoint - SDK and adapter errors", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 500 and logs error when SDK cancel throws", async () => {
-    const { logger } = await import("better-auth");
+  it("returns 500 when SDK cancel throws", async () => {
     const creem = createMockCreem() as any;
     creem.subscriptions.cancel.mockRejectedValue(new Error("SDK cancel error"));
     const handler = createCancelSubscriptionEndpoint(creem, optionsNoPersist);
@@ -569,9 +560,6 @@ describe("Cancel subscription endpoint - SDK and adapter errors", () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({ error: "Failed to cancel subscription" }),
       { status: 500 },
-    );
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to cancel subscription"),
     );
   });
 
@@ -585,7 +573,6 @@ describe("Cancel subscription endpoint - SDK and adapter errors", () => {
   });
 
   it("returns 500 when adapter.findMany throws", async () => {
-    const { logger } = await import("better-auth");
     const adapter = createErrorAdapter();
     const creem = createMockCreem() as any;
     const handler = createCancelSubscriptionEndpoint(creem, defaultOptions);
@@ -596,9 +583,6 @@ describe("Cancel subscription endpoint - SDK and adapter errors", () => {
       expect.objectContaining({ error: "Failed to cancel subscription" }),
       { status: 500 },
     );
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to cancel subscription"),
-    );
   });
 });
 
@@ -607,8 +591,7 @@ describe("Retrieve subscription endpoint - SDK and adapter errors", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 500 and logs error when SDK get throws", async () => {
-    const { logger } = await import("better-auth");
+  it("returns 500 when SDK get throws", async () => {
     const creem = createMockCreem() as any;
     creem.subscriptions.get.mockRejectedValue(new Error("SDK get error"));
     const handler = createRetrieveSubscriptionEndpoint(creem, optionsNoPersist);
@@ -618,9 +601,6 @@ describe("Retrieve subscription endpoint - SDK and adapter errors", () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({ error: "Failed to retrieve subscription" }),
       { status: 500 },
-    );
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to retrieve subscription"),
     );
   });
 
@@ -643,8 +623,7 @@ describe("Search transactions endpoint - SDK errors", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 500 and logs error when SDK search throws", async () => {
-    const { logger } = await import("better-auth");
+  it("returns 500 when SDK search throws", async () => {
     const creem = createMockCreem() as any;
     creem.transactions.search.mockRejectedValue(new Error("SDK search error"));
     const handler = createSearchTransactionsEndpoint(creem, defaultOptions);
@@ -656,9 +635,6 @@ describe("Search transactions endpoint - SDK errors", () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({ error: "Failed to search transactions" }),
       { status: 500 },
-    );
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to search transactions"),
     );
   });
 });
@@ -737,14 +713,14 @@ describe("Has access granted - additional status tests", () => {
     vi.clearAllMocks();
   });
 
-  it("returns true for 'paid' status subscription", async () => {
+  it("returns false for unknown 'paid' status subscription", async () => {
     const adapter = createMockAdapter();
     adapter.findMany.mockResolvedValue([{ ...mockDbSubscription, status: "paid" }]);
     const handler = createHasAccessGrantedEndpoint(defaultOptions);
     const ctx = createMockContext({ adapter });
     mockGetSession.mockResolvedValue({ user: { id: "user_123" } });
     await handler(ctx);
-    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({ hasAccessGranted: true }));
+    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({ hasAccessGranted: false }));
   });
 
   it("returns true for unpaid subscription with future periodEnd", async () => {

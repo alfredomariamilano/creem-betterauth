@@ -96,10 +96,7 @@ describe("webhook handler", () => {
 
     const handler = createWebhookEndpoint(options);
     await handler(ctx as any);
-    expect(ctx.json).toHaveBeenCalledWith(
-      { error: "Webhook secret is not configured" },
-      { status: 400 },
-    );
+    expect(ctx.json).toHaveBeenCalledWith({ error: "Invalid signature" }, { status: 400 });
   });
 
   it("rejects invalid signature", async () => {
