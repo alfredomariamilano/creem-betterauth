@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/armitage-labs/creem-betterauth/compare/v1.0.0...v1.0.1) (2026-03-06)
+
+
+### Bug Fixes
+
+* **ci:** update npm for trusted publishing OIDC support ([6461d98](https://github.com/armitage-labs/creem-betterauth/commit/6461d98bacd7cd0e8c7f13066e70149d427ca6df))
+
 # [1.0.0](https://github.com/armitage-labs/creem-betterauth/compare/v0.0.12...v1.0.0) (2026-03-06)
 
 
