@@ -223,7 +223,11 @@ export async function createCheckout(
   });
 
   return {
-    url: checkout.checkoutUrl ?? (() => { throw new Error("Creem API returned no checkout URL"); })(),
+    url:
+      checkout.checkoutUrl ??
+      (() => {
+        throw new Error("Creem API returned no checkout URL");
+      })(),
     redirect: true,
   };
 }

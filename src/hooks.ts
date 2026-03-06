@@ -351,7 +351,8 @@ async function updateSubscriptionFromEvent(
 
       // Find the subscription for this specific product
       subscription =
-        subscriptions.find((sub: SubscriptionRecord) => sub.productId === productId) || subscriptions[0];
+        subscriptions.find((sub: SubscriptionRecord) => sub.productId === productId) ||
+        subscriptions[0];
     }
 
     if (!subscription) {
