@@ -2,7 +2,7 @@ import { createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
 import { type GenericEndpointContext, logger } from "better-auth";
 import { Creem } from "creem";
 import { z } from "zod";
-import type { CreemOptions } from "./types.js";
+import type { CreemOptions, SubscriptionRecord } from "./types.js";
 import type {
   CancelSubscriptionInput,
   CancelSubscriptionResponse,
@@ -13,19 +13,6 @@ export const CancelSubscriptionParams = z.object({
 });
 
 export type CancelSubscriptionParams = z.infer<typeof CancelSubscriptionParams>;
-
-interface Subscription {
-  id: string;
-  productId: string;
-  referenceId: string;
-  creemCustomerId?: string;
-  creemSubscriptionId?: string;
-  creemOrderId?: string;
-  status: string;
-  periodStart?: Date;
-  periodEnd?: Date;
-  cancelAtPeriodEnd?: boolean;
-}
 
 // Re-export types for convenience
 export type { CancelSubscriptionInput, CancelSubscriptionResponse };
@@ -63,7 +50,7 @@ const createCancelSubscriptionHandler = (creem: Creem, options: CreemOptions) =>
         logger.debug(`[creem] Cancel: looking up subscriptions for user ${userId}`);
 
         // Find all subscriptions for this user
-        const subscriptions = await ctx.context.adapter.findMany<Subscription>({
+        const subscriptions = await ctx.context.adapter.findMany<SubscriptionRecord>({
           model: "creem_subscription",
           where: [{ field: "referenceId", value: userId }],
         });

@@ -1,25 +1,12 @@
 import { createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
 import { type GenericEndpointContext, logger } from "better-auth";
 import { z } from "zod";
-import type { CreemOptions } from "./types.js";
+import type { CreemOptions, SubscriptionRecord } from "./types.js";
 
 // No input needed - uses session to get user ID
 export const HasAccessGrantedParams = z.object({}).optional();
 
 export type HasAccessGrantedParams = z.infer<typeof HasAccessGrantedParams>;
-
-interface Subscription {
-  id: string;
-  productId: string;
-  referenceId: string;
-  creemCustomerId?: string;
-  creemSubscriptionId?: string;
-  creemOrderId?: string;
-  status: string;
-  periodStart?: Date;
-  periodEnd?: Date;
-  cancelAtPeriodEnd?: boolean;
-}
 
 const createHasAccessGrantedHandler = (options: CreemOptions) => {
   return async (ctx: GenericEndpointContext) => {
@@ -53,7 +40,7 @@ const createHasAccessGrantedHandler = (options: CreemOptions) => {
       const userId = session.user.id;
 
       // Find all subscriptions for this user
-      const subscriptions = await ctx.context.adapter.findMany<Subscription>({
+      const subscriptions = await ctx.context.adapter.findMany<SubscriptionRecord>({
         model: "creem_subscription",
         where: [{ field: "referenceId", value: userId }],
       });
@@ -92,7 +79,7 @@ const createHasAccessGrantedHandler = (options: CreemOptions) => {
         }
 
         // For canceled, past_due, or unpaid - check if period hasn't ended yet
-        if (status === "canceled" || status === "unpaid") {
+        if (status === "canceled" || status === "past_due" || status === "unpaid") {
           if (subscription.periodEnd) {
             const periodEnd = new Date(subscription.periodEnd);
 
@@ -135,7 +122,6 @@ const createHasAccessGrantedHandler = (options: CreemOptions) => {
         {
           hasAccessGranted: undefined,
           message: "Failed to check subscription status",
-          error: errorMessage,
         },
         { status: 500 },
       );

@@ -223,7 +223,7 @@ export async function createCheckout(
   });
 
   return {
-    url: checkout.checkoutUrl || "",
+    url: checkout.checkoutUrl ?? (() => { throw new Error("Creem API returned no checkout URL"); })(),
     redirect: true,
   };
 }
@@ -493,6 +493,9 @@ export async function checkSubscriptionAccess(
   productName?: string;
 }> {
   // Database mode
+  // TODO: This uses a raw query builder API (select/from/where) that may not match
+  // all Better Auth database adapters. For reliable access checks, prefer the
+  // `hasAccessGranted` Better Auth endpoint which uses the adapter correctly.
   if (options.database && options.userId) {
     try {
       const subscriptions = await options.database
@@ -572,6 +575,7 @@ export async function getActiveSubscriptions(
   }>
 > {
   // Database mode
+  // TODO: Same raw query builder caveat as checkSubscriptionAccess above.
   if (options.database && options.userId) {
     try {
       const subscriptions = await options.database

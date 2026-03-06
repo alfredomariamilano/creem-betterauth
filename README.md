@@ -239,6 +239,20 @@ https://your-domain.com/api/auth/creem/webhook
 
 3. (Optional) For local development and testing, use a tool like ngrok to expose your local server. Add the public ngrok URL to your Creem dashboard webhook settings.
 
+## 📂 Examples
+
+A runnable **Next.js example app** is included in [`examples/nextjs/`](./examples/nextjs). It demonstrates email/password auth, checkout, access checks, and the customer portal using SQLite — all wired up via pnpm workspaces so the plugin resolves from your local build automatically.
+
+```bash
+pnpm install && pnpm run build
+cd examples/nextjs
+cp .env.example .env.local  # fill in your Creem test API key
+pnpm migrate
+pnpm dev
+```
+
+See the [example README](./examples/nextjs/README.md) for full setup instructions.
+
 ## 💻 Usage
 
 ### Client-Side (Better Auth Endpoints)
@@ -563,11 +577,11 @@ export async function POST(req: Request) {
   const signature = req.headers.get("creem-signature");
 
   if (
-    !validateWebhookSignature(
+    !(await validateWebhookSignature(
       payload,
       signature,
       process.env.CREEM_WEBHOOK_SECRET!,
-    )
+    ))
   ) {
     return new Response("Invalid signature", { status: 401 });
   }
@@ -962,6 +976,7 @@ Either enable database mode or implement custom logic with the Creem SDK directl
 
 ## 📖 Additional Resources
 
+- [Next.js Example App](./examples/nextjs) — Runnable example with email/password auth, checkout, and portal
 - [Creem Documentation](https://docs.creem.io)
 - [Better-Auth Documentation](https://better-auth.com)
 - [GitHub Repository](https://github.com/armitage-labs/creem-betterauth)

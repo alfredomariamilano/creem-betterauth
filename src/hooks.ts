@@ -13,20 +13,7 @@ import type {
   NormalizedSubscriptionEntity,
   SubscriptionStatus,
 } from "./webhook-types.js";
-import type { CreemOptions } from "./types.js";
-
-interface Subscription {
-  id: string;
-  productId: string;
-  referenceId: string;
-  creemCustomerId?: string;
-  creemSubscriptionId?: string;
-  creemOrderId?: string;
-  status: string;
-  periodStart?: Date;
-  periodEnd?: Date;
-  cancelAtPeriodEnd?: boolean;
-}
+import type { CreemOptions, SubscriptionRecord } from "./types.js";
 
 /**
  * Handle checkout.completed event
@@ -117,7 +104,7 @@ export async function onCheckoutCompleted(
         };
 
         // Try to find existing subscription by creemSubscriptionId or referenceId + productId
-        const existingSubscription = await ctx.context.adapter.findOne<Subscription>({
+        const existingSubscription = await ctx.context.adapter.findOne<SubscriptionRecord>({
           model: "creem_subscription",
           where: [{ field: "creemSubscriptionId", value: subscriptionData.id }],
         });
@@ -132,7 +119,7 @@ export async function onCheckoutCompleted(
           logger.info(`[creem] Updated subscription ${existingSubscription.id} from checkout`);
         } else {
           // Create new subscription
-          const newSubscription = await ctx.context.adapter.create<Subscription>({
+          const newSubscription = await ctx.context.adapter.create<SubscriptionRecord>({
             model: "creem_subscription",
             data: subscriptionUpdate,
           });
@@ -349,7 +336,7 @@ async function updateSubscriptionFromEvent(
     logger.debug(`[creem] Subscription lookup: trying creemSubscriptionId=${subscriptionData.id}`);
 
     // Find subscription by creemSubscriptionId
-    let subscription = await ctx.context.adapter.findOne<Subscription>({
+    let subscription = await ctx.context.adapter.findOne<SubscriptionRecord>({
       model: "creem_subscription",
       where: [{ field: "creemSubscriptionId", value: subscriptionData.id }],
     });
@@ -357,14 +344,14 @@ async function updateSubscriptionFromEvent(
     // If not found by creemSubscriptionId, try to find by creemCustomerId and productId
     if (!subscription && customerId) {
       logger.debug(`[creem] Subscription lookup: fallback to customerId=${customerId}`);
-      const subscriptions = await ctx.context.adapter.findMany<Subscription>({
+      const subscriptions = await ctx.context.adapter.findMany<SubscriptionRecord>({
         model: "creem_subscription",
         where: [{ field: "creemCustomerId", value: customerId }],
       });
 
       // Find the subscription for this specific product
       subscription =
-        subscriptions.find((sub: Subscription) => sub.productId === productId) || subscriptions[0];
+        subscriptions.find((sub: SubscriptionRecord) => sub.productId === productId) || subscriptions[0];
     }
 
     if (!subscription) {
@@ -373,7 +360,7 @@ async function updateSubscriptionFromEvent(
     }
 
     // Prepare update data
-    const updateData: Partial<Subscription> = {
+    const updateData: Partial<SubscriptionRecord> = {
       status,
       creemSubscriptionId: subscriptionData.id,
       creemCustomerId: customerId,
