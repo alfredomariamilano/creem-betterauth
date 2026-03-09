@@ -141,6 +141,9 @@ export interface CreemOptions {
    * onCheckoutCompleted: async ({ webhookEventType, product, customer, order, subscription }) => {
    *   console.log(`Checkout completed: ${customer?.email} purchased ${product.name}`);
    * }
++
++   * @migration Previous signature: `onCheckoutCompleted(data)`; new form is
++   *   `(ctx, data)`.
    */
   onCheckoutCompleted?: (
     ctx: GenericEndpointContext,
@@ -150,6 +153,9 @@ export interface CreemOptions {
   /**
    * Called when a refund is created.
    * All properties are flattened for easy destructuring.
++
++   * @migration Previous signature: `onRefundCreated(data)`; new form is
++   *   `(ctx, data)`.
    */
   onRefundCreated?: (
     ctx: GenericEndpointContext,
@@ -159,6 +165,9 @@ export interface CreemOptions {
   /**
    * Called when a dispute is created.
    * All properties are flattened for easy destructuring.
++
++   * @migration Previous signature: `onDisputeCreated(data)`; new form is
++   *   `(ctx, data)`.
    */
   onDisputeCreated?: (
     ctx: GenericEndpointContext,
@@ -174,6 +183,9 @@ export interface CreemOptions {
    * onSubscriptionActive: async ({ product, customer, status }) => {
    *   console.log(`${customer.email} subscribed to ${product.name}`);
    * }
++
++   * @migration Previous signature: `onSubscriptionActive(data)`; new form is
++   *   `(ctx, data)`.
    */
   onSubscriptionActive?: (
     ctx: GenericEndpointContext,
@@ -183,6 +195,9 @@ export interface CreemOptions {
   /**
    * Called when a subscription is in trialing state.
    * All properties are flattened for easy destructuring.
++
++   * @migration Previous signature: `onSubscriptionTrialing(data)`; now
++   *   `(ctx, data)`.
    */
   onSubscriptionTrialing?: (
     ctx: GenericEndpointContext,
@@ -192,6 +207,9 @@ export interface CreemOptions {
   /**
    * Called when a subscription is canceled.
    * All properties are flattened for easy destructuring.
++
++   * @migration Previous signature: `onSubscriptionCanceled(data)`; now
++   *   `(ctx, data)`.
    */
   onSubscriptionCanceled?: (
     ctx: GenericEndpointContext,

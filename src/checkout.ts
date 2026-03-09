@@ -81,6 +81,27 @@ const createCheckoutHandler = (creem: Creem, options: CreemOptions) => {
     try {
       const session = await getSessionFromCtx(ctx);
 
+      // ownership validation – body.customer.id may be supplied by clients
+      // (some examples permit it), but we must never trust an arbitrary value.
+      // If an explicit ID is provided it has to match the ID stored on the
+      // session.  If the session has no creemCustomerId we reject because we
+      // can't verify ownership.
+      if (body.customer?.id) {
+        if (session?.user?.creemCustomerId) {
+          if (body.customer.id !== session.user.creemCustomerId) {
+            return ctx.json(
+              { error: "Provided customer ID does not match session" },
+              { status: 400 },
+            );
+          }
+        } else {
+          return ctx.json(
+            { error: "Cannot supply a customer ID without a session value" },
+            { status: 400 },
+          );
+        }
+      }
+
       // Check if user has already used a trial (trial abuse prevention)
       let userHadTrial = false;
       if (session?.user?.id) {
@@ -92,7 +113,8 @@ const createCheckoutHandler = (creem: Creem, options: CreemOptions) => {
         }
       }
 
-      // prefer the customer ID from the session
+      // prefer the customer ID from the session (validation above guarantees
+      // a provided ID is safe).
       const id = session?.user?.creemCustomerId || body.customer?.id;
       // prefer the email from the body over the session
       const email = body.customer?.email || session?.user?.email;

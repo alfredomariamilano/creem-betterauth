@@ -23,5 +23,9 @@ export interface RetrieveSubscriptionInput {
 
 /**
  * Creem subscription object returned from the API.
+ *
++ * @see SubscriptionEntity$Outbound – this alias is offered for
++ *   convenience. note that the original Creem JSDoc is not preserved when
++ *   the type is re-exported here.
  */
 export type SubscriptionData = SubscriptionEntity$Outbound;

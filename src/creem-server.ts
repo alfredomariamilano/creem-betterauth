@@ -75,7 +75,9 @@ export function isActiveSubscription(status: string): boolean {
  * ```typescript
  * import { formatCreemDate } from "@creem_io/better-auth/server";
  *
- * const renewalDate = formatCreemDate(subscription.next_billing_date);
+ * // breaking change: field was renamed from next_billing_date ->
+ * // next_transaction_date
+ * const renewalDate = formatCreemDate(subscription.next_transaction_date);
  * console.log(renewalDate.toLocaleDateString());
  * ```
  */

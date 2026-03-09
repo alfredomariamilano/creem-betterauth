@@ -542,7 +542,9 @@ if (isActiveSubscription(subscription.status)) {
 }
 
 // Format Creem timestamps
-const renewalDate = formatCreemDate(subscription.next_billing_date);
+// breaking change: the `next_billing_date` field has been renamed to
+// `next_transaction_date`.
+const renewalDate = formatCreemDate(subscription.next_transaction_date);
 console.log(renewalDate.toLocaleDateString());
 
 // Calculate days until renewal
