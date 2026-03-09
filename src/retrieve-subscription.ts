@@ -1,47 +1,29 @@
 import { createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
-import type { GenericEndpointContext } from "better-auth";
+import { type GenericEndpointContext, logger } from "better-auth";
 import { Creem } from "creem";
 import { z } from "zod";
-import type { CreemOptions } from "./types.js";
-import type {
-  RetrieveSubscriptionInput,
-  SubscriptionData,
-} from "./retrieve-subscription-types.js";
+import type { CreemOptions, SubscriptionRecord } from "./types.js";
+import type { RetrieveSubscriptionInput, SubscriptionData } from "./retrieve-subscription-types.js";
 
 export const RetrieveSubscriptionParams = z.object({
   id: z.string().optional(),
 });
 
-export type RetrieveSubscriptionParams = z.infer<
-  typeof RetrieveSubscriptionParams
->;
-
-interface Subscription {
-  id: string;
-  productId: string;
-  referenceId: string;
-  creemCustomerId?: string;
-  creemSubscriptionId?: string;
-  creemOrderId?: string;
-  status: string;
-  periodStart?: Date;
-  periodEnd?: Date;
-  cancelAtPeriodEnd?: boolean;
-}
+export type RetrieveSubscriptionParams = z.infer<typeof RetrieveSubscriptionParams>;
 
 // Re-export types for convenience
 export type { RetrieveSubscriptionInput, SubscriptionData };
 
-const createRetrieveSubscriptionHandler = (
-  creem: Creem,
-  options: CreemOptions,
-) => {
+const createRetrieveSubscriptionHandler = (creem: Creem, options: CreemOptions) => {
   return async (ctx: GenericEndpointContext) => {
     const body = ctx.body as RetrieveSubscriptionParams;
 
     if (!options.apiKey) {
       return ctx.json(
-        { error: "Creem API key is not configured. Please set the apiKey option when initializing the Creem plugin." },
+        {
+          error:
+            "Creem API key is not configured. Please set the apiKey option when initializing the Creem plugin.",
+        },
         { status: 500 },
       );
     }
@@ -62,8 +44,10 @@ const createRetrieveSubscriptionHandler = (
         // If database persistence is enabled, fetch the user's subscription from the database
         const userId = session.user.id;
 
+        logger.debug(`[creem] Retrieve: looking up subscriptions for user ${userId}`);
+
         // Find all subscriptions for this user
-        const subscriptions = await ctx.context.adapter.findMany<Subscription>({
+        const subscriptions = await ctx.context.adapter.findMany<SubscriptionRecord>({
           model: "creem_subscription",
           where: [{ field: "referenceId", value: userId }],
         });
@@ -77,24 +61,17 @@ const createRetrieveSubscriptionHandler = (
             subscriptionId = userSubscription.creemSubscriptionId;
           } else if (!subscriptionId) {
             // If subscription doesn't have a Creem ID and no ID provided, return error
-            return ctx.json(
-              { error: "No subscription found for this user" },
-              { status: 404 },
-            );
+            return ctx.json({ error: "No subscription found for this user" }, { status: 404 });
           }
         } else if (!subscriptionId) {
           // No subscriptions in database and no ID provided
-          return ctx.json(
-            { error: "No subscription found for this user" },
-            { status: 404 },
-          );
+          return ctx.json({ error: "No subscription found for this user" }, { status: 404 });
         }
       } else if (!subscriptionId) {
         // If persistence is disabled and no ID provided, return error
         return ctx.json(
           {
-            error:
-              "Subscription ID is required when database persistence is disabled",
+            error: "Subscription ID is required when database persistence is disabled",
           },
           { status: 400 },
         );
@@ -118,14 +95,15 @@ const createRetrieveSubscriptionHandler = (
         }
       }
 
+      logger.debug(`[creem] Retrieving subscription: ${subscriptionId}`);
+
       const subscription = await creem.subscriptions.get(subscriptionId);
 
       return ctx.json(subscription);
     } catch (error) {
-      return ctx.json(
-        { error: "Failed to retrieve subscription" },
-        { status: 500 },
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`[creem] Failed to retrieve subscription: ${message}`);
+      return ctx.json({ error: "Failed to retrieve subscription" }, { status: 500 });
     }
   };
 };
@@ -175,10 +153,7 @@ const createRetrieveSubscriptionHandler = (
  * }
  * ```
  */
-export const createRetrieveSubscriptionEndpoint = (
-  creem: Creem,
-  options: CreemOptions,
-) => {
+export const createRetrieveSubscriptionEndpoint = (creem: Creem, options: CreemOptions) => {
   return createAuthEndpoint(
     "/creem/retrieve-subscription",
     {

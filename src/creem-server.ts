@@ -1,8 +1,6 @@
+import { logger } from "better-auth";
 import { Creem } from "creem";
-import type {
-  CreateCheckoutInput,
-  CreateCheckoutResponse,
-} from "./checkout-types.js";
+import type { CreateCheckoutInput, CreateCheckoutResponse } from "./checkout-types.js";
 import type { CreatePortalResponse } from "./portal-types.js";
 import type { SubscriptionData } from "./retrieve-subscription-types.js";
 import type { SearchTransactionsResponse } from "./search-transactions-types.js";
@@ -39,9 +37,7 @@ export interface CreemServerConfig {
  * ```
  */
 export function createCreemClient(config: CreemServerConfig): Creem {
-  const serverURL = config.testMode
-    ? "https://test-api.creem.io"
-    : "https://api.creem.io";
+  const serverURL = config.testMode ? "https://test-api.creem.io" : "https://api.creem.io";
 
   return new Creem({ apiKey: config.apiKey, serverURL });
 }
@@ -203,12 +199,12 @@ export async function createCheckout(
      * @since 1.1.0
      */
     skipTrial?: boolean;
-		redirect?: boolean;
-  }
+    redirect?: boolean;
+  },
 ): Promise<CreateCheckoutResponse> {
   if (!config.apiKey) {
     throw new Error(
-      "Creem API key is not configured. Please provide an apiKey in the CreemServerConfig."
+      "Creem API key is not configured. Please provide an apiKey in the CreemServerConfig.",
     );
   }
 
@@ -228,8 +224,13 @@ export async function createCheckout(
     },
   });
 
+  const checkoutUrl = checkout.checkoutUrl;
+  if (!checkoutUrl) {
+    throw new Error("Creem API returned no checkout URL");
+  }
+
   return {
-    url: checkout.checkoutUrl || "",
+    url: checkoutUrl,
     redirect: !!input.redirect,
   };
 }
@@ -239,7 +240,7 @@ export async function createCheckout(
  * Useful in Server Components, Server Actions, or custom API routes.
  *
  * @param config - Creem configuration
- * @param customerId - Creem customer ID
+ * @param input - Portal request parameters
  * @returns Portal URL and redirect flag
  *
  * @example
@@ -257,7 +258,7 @@ export async function createCheckout(
  *         apiKey: process.env.CREEM_API_KEY!,
  *         testMode: true
  *       },
- *       session.user.creemCustomerId
+ *       { customerId: session.user.creemCustomerId }
  *     );
  *     redirect(url);
  *   }
@@ -269,13 +270,13 @@ export async function createCheckout(
 export async function createPortal(
   config: CreemServerConfig,
   input: {
-		customerId: string
-		redirect?: boolean;
-	}
+    customerId: string;
+    redirect?: boolean;
+  },
 ): Promise<CreatePortalResponse> {
   if (!config.apiKey) {
     throw new Error(
-      "Creem API key is not configured. Please provide an apiKey in the CreemServerConfig."
+      "Creem API key is not configured. Please provide an apiKey in the CreemServerConfig.",
     );
   }
 
@@ -284,6 +285,10 @@ export async function createPortal(
   const portal = await creem.customers.generateBillingLinks({
     customerId: input.customerId,
   });
+
+  if (!portal.customerPortalLink) {
+    throw new Error("Creem API returned no customer portal URL");
+  }
 
   return {
     url: portal.customerPortalLink,
@@ -321,11 +326,11 @@ export async function createPortal(
  */
 export async function cancelSubscription(
   config: CreemServerConfig,
-  subscriptionId: string
+  subscriptionId: string,
 ): Promise<{ success: boolean; message: string }> {
   if (!config.apiKey) {
     throw new Error(
-      "Creem API key is not configured. Please provide an apiKey in the CreemServerConfig."
+      "Creem API key is not configured. Please provide an apiKey in the CreemServerConfig.",
     );
   }
 
@@ -372,11 +377,11 @@ export async function cancelSubscription(
  */
 export async function retrieveSubscription(
   config: CreemServerConfig,
-  subscriptionId: string
+  subscriptionId: string,
 ): Promise<SubscriptionData> {
   if (!config.apiKey) {
     throw new Error(
-      "Creem API key is not configured. Please provide an apiKey in the CreemServerConfig."
+      "Creem API key is not configured. Please provide an apiKey in the CreemServerConfig.",
     );
   }
 
@@ -424,11 +429,11 @@ export async function searchTransactions(
     orderId?: string;
     pageNumber?: number;
     pageSize?: number;
-  }
+  },
 ): Promise<SearchTransactionsResponse> {
   if (!config.apiKey) {
     throw new Error(
-      "Creem API key is not configured. Please provide an apiKey in the CreemServerConfig."
+      "Creem API key is not configured. Please provide an apiKey in the CreemServerConfig.",
     );
   }
 
@@ -493,7 +498,7 @@ export async function checkSubscriptionAccess(
   config: CreemServerConfig,
   options:
     | { database: any; userId: string; customerId?: never }
-    | { customerId: string; database?: never; userId?: never }
+    | { customerId: string; database?: never; userId?: never },
 ): Promise<{
   hasAccess: boolean;
   status?: string;
@@ -502,6 +507,9 @@ export async function checkSubscriptionAccess(
   productName?: string;
 }> {
   // Database mode
+  // TODO: This uses a raw query builder API (select/from/where) that may not match
+  // all Better Auth database adapters. For reliable access checks, prefer the
+  // `hasAccessGranted` Better Auth endpoint which uses the adapter correctly.
   if (options.database && options.userId) {
     try {
       const subscriptions = await options.database
@@ -510,10 +518,7 @@ export async function checkSubscriptionAccess(
         .where("referenceId", "=", options.userId);
 
       const activeSubscription = subscriptions.find(
-        (sub: any) =>
-          sub.status === "active" ||
-          sub.status === "trialing" ||
-          sub.status === "paid"
+        (sub: any) => sub.status === "active" || sub.status === "trialing" || sub.status === "paid",
       );
 
       if (activeSubscription) {
@@ -529,19 +534,16 @@ export async function checkSubscriptionAccess(
 
       return { hasAccess: false };
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`[creem] Failed to check subscription access (database mode): ${message}`);
       // Fall through to API check
     }
   }
 
   // API mode
   if (options.customerId) {
-    try {
-      // Note: The Creem SDK doesn't have a direct searchSubscriptions method.
-      // You'll need to retrieve subscriptions by other means or use the database mode.
-      return { hasAccess: false };
-    } catch (error) {
-      return { hasAccess: false };
-    }
+    // API mode not yet supported — use database mode for access checks
+    return { hasAccess: false };
   }
 
   return { hasAccess: false };
@@ -576,7 +578,7 @@ export async function getActiveSubscriptions(
   config: CreemServerConfig,
   options:
     | { database: any; userId: string; customerId?: never }
-    | { customerId: string; database?: never; userId?: never }
+    | { customerId: string; database?: never; userId?: never },
 ): Promise<
   Array<{
     id: string;
@@ -587,6 +589,7 @@ export async function getActiveSubscriptions(
   }>
 > {
   // Database mode
+  // TODO: Same raw query builder caveat as checkSubscriptionAccess above.
   if (options.database && options.userId) {
     try {
       const subscriptions = await options.database
@@ -597,9 +600,7 @@ export async function getActiveSubscriptions(
       return subscriptions
         .filter(
           (sub: any) =>
-            sub.status === "active" ||
-            sub.status === "trialing" ||
-            sub.status === "paid"
+            sub.status === "active" || sub.status === "trialing" || sub.status === "paid",
         )
         .map((sub: any) => ({
           id: sub.creemSubscriptionId,
@@ -608,19 +609,16 @@ export async function getActiveSubscriptions(
           periodEnd: sub.periodEnd ? new Date(sub.periodEnd) : undefined,
         }));
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`[creem] Failed to get active subscriptions (database mode): ${message}`);
       return [];
     }
   }
 
   // API mode
   if (options.customerId) {
-    try {
-      // Note: The Creem SDK doesn't have a direct searchSubscriptions method.
-      // You'll need to retrieve subscriptions by other means or use the database mode.
-      return [];
-    } catch (error) {
-      return [];
-    }
+    // API mode not yet supported — use database mode for subscription queries
+    return [];
   }
 
   return [];

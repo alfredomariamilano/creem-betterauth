@@ -1,4 +1,4 @@
-import { BetterAuthPlugin } from "better-auth";
+import { BetterAuthPlugin, logger } from "better-auth";
 import { Creem } from "creem";
 import { getSchema } from "./schema.js";
 import { createCheckoutEndpoint } from "./checkout.js";
@@ -31,10 +31,7 @@ export type {
 } from "./checkout-types.js";
 
 // Export portal types
-export type {
-  CreatePortalInput,
-  CreatePortalResponse,
-} from "./portal-types.js";
+export type { CreatePortalInput, CreatePortalResponse } from "./portal-types.js";
 
 // Export subscription types
 export type {
@@ -42,10 +39,7 @@ export type {
   CancelSubscriptionResponse,
 } from "./cancel-subscription-types.js";
 
-export type {
-  RetrieveSubscriptionInput,
-  SubscriptionData,
-} from "./retrieve-subscription-types.js";
+export type { RetrieveSubscriptionInput, SubscriptionData } from "./retrieve-subscription-types.js";
 
 // Export transaction types
 export type {
@@ -90,7 +84,7 @@ export {
  *
  * @example
  * ```typescript
- * import { creem } from "./lib/creem-betterauth";
+ * import { creem } from "@creem_io/better-auth";
  *
  * export const auth = betterAuth({
  *   plugins: [
@@ -120,10 +114,14 @@ export const creem = <T extends CreemOptions>(options: T) => {
   });
 
   if (!options.apiKey) {
-    console.warn(
-      "⚠️  Creem API key is not set. The plugin will initialize, but Creem API functionality will not work until an API key is provided."
+    logger.warn(
+      "[creem] API key is not set. The plugin will initialize, but API functionality will not work until an API key is provided.",
     );
   }
+
+  logger.debug(
+    `[creem] Plugin initialized (${options.testMode ? "test" : "production"} mode, persistence: ${options.persistSubscriptions !== false}, webhook: ${!!options.webhookSecret})`,
+  );
 
   return {
     id: "creem",

@@ -10,7 +10,13 @@ import type { CreateCustomerPortalLinkRequestEntity } from "creem/models/compone
  * });
  * ```
  */
-export type CreatePortalInput = Partial<CreateCustomerPortalLinkRequestEntity>;
+export type CreatePortalInput = Partial<CreateCustomerPortalLinkRequestEntity> & {
+  /**
+   * Indicates whether the client should redirect to the returned portal URL.
+   * Defaults to false.
+   */
+  redirect?: boolean;
+};
 
 /**
  * Response from creating a customer portal session.
@@ -28,4 +34,3 @@ export interface CreatePortalResponse {
    */
   redirect: boolean;
 }
-

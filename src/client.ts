@@ -40,7 +40,13 @@ export const creemClient = <T extends { persistSubscriptions?: boolean } = { per
       apiKey: string;
       persistSubscriptions: T["persistSubscriptions"];
     }>>,
-    pathMethods: { "/creem/create-portal": "POST" },
+    pathMethods: {
+      "/creem/create-checkout": "POST",
+      "/creem/create-portal": "POST",
+      "/creem/cancel-subscription": "POST",
+      "/creem/retrieve-subscription": "POST",
+      "/creem/search-transactions": "POST",
+    },
   } satisfies BetterAuthClientPlugin;
 };
 
@@ -58,10 +64,7 @@ export type {
   CancelSubscriptionResponse,
 } from "./cancel-subscription-types.js";
 
-export type {
-  RetrieveSubscriptionInput,
-  SubscriptionData,
-} from "./retrieve-subscription-types.js";
+export type { RetrieveSubscriptionInput, SubscriptionData } from "./retrieve-subscription-types.js";
 
 export type {
   SearchTransactionsInput,

@@ -1,8 +1,8 @@
 import { createAuthEndpoint, getSessionFromCtx } from "better-auth/api";
-import type { GenericEndpointContext } from "better-auth";
+import { type GenericEndpointContext, logger } from "better-auth";
 import { Creem } from "creem";
 import { z } from "zod";
-import type { CreemOptions } from "./types.js";
+import type { CreemOptions, SubscriptionRecord } from "./types.js";
 import type {
   CancelSubscriptionInput,
   CancelSubscriptionResponse,
@@ -14,32 +14,19 @@ export const CancelSubscriptionParams = z.object({
 
 export type CancelSubscriptionParams = z.infer<typeof CancelSubscriptionParams>;
 
-interface Subscription {
-  id: string;
-  productId: string;
-  referenceId: string;
-  creemCustomerId?: string;
-  creemSubscriptionId?: string;
-  creemOrderId?: string;
-  status: string;
-  periodStart?: Date;
-  periodEnd?: Date;
-  cancelAtPeriodEnd?: boolean;
-}
-
 // Re-export types for convenience
 export type { CancelSubscriptionInput, CancelSubscriptionResponse };
 
-const createCancelSubscriptionHandler = (
-  creem: Creem,
-  options: CreemOptions,
-) => {
+const createCancelSubscriptionHandler = (creem: Creem, options: CreemOptions) => {
   return async (ctx: GenericEndpointContext) => {
     const body = ctx.body as CancelSubscriptionParams;
 
     if (!options.apiKey) {
       return ctx.json(
-        { error: "Creem API key is not configured. Please set the apiKey option when initializing the Creem plugin." },
+        {
+          error:
+            "Creem API key is not configured. Please set the apiKey option when initializing the Creem plugin.",
+        },
         { status: 500 },
       );
     }
@@ -60,8 +47,10 @@ const createCancelSubscriptionHandler = (
         // If database persistence is enabled, fetch the user's subscription from the database
         const userId = session.user.id;
 
+        logger.debug(`[creem] Cancel: looking up subscriptions for user ${userId}`);
+
         // Find all subscriptions for this user
-        const subscriptions = await ctx.context.adapter.findMany<Subscription>({
+        const subscriptions = await ctx.context.adapter.findMany<SubscriptionRecord>({
           model: "creem_subscription",
           where: [{ field: "referenceId", value: userId }],
         });
@@ -88,17 +77,13 @@ const createCancelSubscriptionHandler = (
           }
         } else if (!subscriptionId) {
           // No subscriptions in database and no ID provided
-          return ctx.json(
-            { error: "No subscription found for this user" },
-            { status: 404 },
-          );
+          return ctx.json({ error: "No subscription found for this user" }, { status: 404 });
         }
       } else if (!subscriptionId) {
         // If persistence is disabled and no ID provided, return error
         return ctx.json(
           {
-            error:
-              "Subscription ID is required when database persistence is disabled",
+            error: "Subscription ID is required when database persistence is disabled",
           },
           { status: 400 },
         );
@@ -122,6 +107,8 @@ const createCancelSubscriptionHandler = (
         }
       }
 
+      logger.debug(`[creem] Cancelling subscription: ${subscriptionId}`);
+
       await creem.subscriptions.cancel(subscriptionId, {});
 
       return ctx.json({
@@ -129,10 +116,9 @@ const createCancelSubscriptionHandler = (
         message: "Subscription cancelled successfully",
       });
     } catch (error) {
-      return ctx.json(
-        { error: "Failed to cancel subscription" },
-        { status: 500 },
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`[creem] Failed to cancel subscription: ${message}`);
+      return ctx.json({ error: "Failed to cancel subscription" }, { status: 500 });
     }
   };
 };
@@ -179,10 +165,7 @@ const createCancelSubscriptionHandler = (
  * }
  * ```
  */
-export const createCancelSubscriptionEndpoint = (
-  creem: Creem,
-  options: CreemOptions,
-) => {
+export const createCancelSubscriptionEndpoint = (creem: Creem, options: CreemOptions) => {
   return createAuthEndpoint(
     "/creem/cancel-subscription",
     {

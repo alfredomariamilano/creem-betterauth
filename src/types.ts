@@ -6,7 +6,7 @@ import {
   NormalizedDisputeEntity,
   NormalizedSubscriptionEntity,
 } from "./webhook-types";
-import { GenericEndpointContext } from "better-auth";
+import type { GenericEndpointContext } from "better-auth";
 
 // ============================================================================
 // Flattened Callback Types (for better developer experience)
@@ -95,6 +95,23 @@ export type RevokeAccessContext = {
   reason: RevokeAccessReason;
 } & NormalizedSubscriptionEntity;
 
+/**
+ * Internal interface representing a subscription record in the database.
+ * Used by endpoint handlers and webhook hooks for DB operations.
+ */
+export interface SubscriptionRecord {
+  id: string;
+  productId: string;
+  referenceId: string;
+  creemCustomerId?: string;
+  creemSubscriptionId?: string;
+  creemOrderId?: string;
+  status: string;
+  periodStart?: Date;
+  periodEnd?: Date;
+  cancelAtPeriodEnd?: boolean;
+}
+
 export interface CreemOptions {
   /**
    * Creem API Key
@@ -108,10 +125,6 @@ export interface CreemOptions {
    * Test mode
    */
   testMode?: boolean;
-  /**
-   * Base URL
-   */
-  baseUrl?: string;
   /**
    * Default success URL
    */
@@ -139,41 +152,38 @@ export interface CreemOptions {
    *
    * @example
    * onCheckoutCompleted: async (ctx, { webhookEventType, product, customer, order, subscription }) => {
-   *   // ctx is the BetterAuth endpoint context, useful for logging/response
-   *   console.log(`Checkout completed: ${customer?.email} purchased ${product.name}`);
-   * }
-+
-+   * @migration Previous signature: `onCheckoutCompleted(data)`; new form is
-+   *   `(ctx, data)`.
+  *   // ctx is the BetterAuth endpoint context, useful for logging/response
+  *   console.log(`Checkout completed: ${customer?.email} purchased ${product.name}`);
+  * }
+  *
+  * @migration Previous signature: `onCheckoutCompleted(data)`; new form is `(ctx, data)`.
    */
   onCheckoutCompleted?: (
     ctx: GenericEndpointContext,
     data: FlatCheckoutCompleted
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a refund is created.
    * All properties are flattened for easy destructuring.
-+
-+   * @migration Previous signature: `onRefundCreated(data)`; new form is
-+   *   `(ctx, data)`.
+   *
+   * @migration Previous signature: `onRefundCreated(data)`; new form is `(ctx, data)`.
    */
   onRefundCreated?: (
     ctx: GenericEndpointContext,
     data: FlatRefundCreated
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a dispute is created.
    * All properties are flattened for easy destructuring.
-+
-+   * @migration Previous signature: `onDisputeCreated(data)`; new form is
-+   *   `(ctx, data)`.
+   *
+   * @migration Previous signature: `onDisputeCreated(data)`; new form is `(ctx, data)`.
    */
   onDisputeCreated?: (
     ctx: GenericEndpointContext,
     data: FlatDisputeCreated
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a subscription becomes active.
@@ -184,38 +194,35 @@ export interface CreemOptions {
    * onSubscriptionActive: async (ctx, { product, customer, status }) => {
    *   console.log(`${customer.email} subscribed to ${product.name}`);
    * }
-+
-+   * @migration Previous signature: `onSubscriptionActive(data)`; new form is
-+   *   `(ctx, data)`.
+   *
+   * @migration Previous signature: `onSubscriptionActive(data)`; new form is `(ctx, data)`.
    */
   onSubscriptionActive?: (
     ctx: GenericEndpointContext,
     data: FlatSubscriptionEvent<"subscription.active">
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a subscription is in trialing state.
    * All properties are flattened for easy destructuring.
-+
-+   * @migration Previous signature: `onSubscriptionTrialing(data)`; now
-+   *   `(ctx, data)`.
+   *
+   * @migration Previous signature: `onSubscriptionTrialing(data)`; now `(ctx, data)`.
    */
   onSubscriptionTrialing?: (
     ctx: GenericEndpointContext,
     data: FlatSubscriptionEvent<"subscription.trialing">
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a subscription is canceled.
    * All properties are flattened for easy destructuring.
-+
-+   * @migration Previous signature: `onSubscriptionCanceled(data)`; now
-+   *   `(ctx, data)`.
+   *
+   * @migration Previous signature: `onSubscriptionCanceled(data)`; now `(ctx, data)`.
    */
   onSubscriptionCanceled?: (
     ctx: GenericEndpointContext,
     data: FlatSubscriptionEvent<"subscription.canceled">
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a subscription is paid.
@@ -224,7 +231,7 @@ export interface CreemOptions {
   onSubscriptionPaid?: (
     ctx: GenericEndpointContext,
     data: FlatSubscriptionEvent<"subscription.paid">
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a subscription has expired.
@@ -233,7 +240,7 @@ export interface CreemOptions {
   onSubscriptionExpired?: (
     ctx: GenericEndpointContext,
     data: FlatSubscriptionEvent<"subscription.expired">
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a subscription is unpaid.
@@ -242,7 +249,7 @@ export interface CreemOptions {
   onSubscriptionUnpaid?: (
     ctx: GenericEndpointContext,
     data: FlatSubscriptionEvent<"subscription.unpaid">
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a subscription is updated.
@@ -251,7 +258,7 @@ export interface CreemOptions {
   onSubscriptionUpdate?: (
     ctx: GenericEndpointContext,
     data: FlatSubscriptionEvent<"subscription.update">
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a subscription is past due.
@@ -260,7 +267,7 @@ export interface CreemOptions {
   onSubscriptionPastDue?: (
     ctx: GenericEndpointContext,
     data: FlatSubscriptionEvent<"subscription.past_due">
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a subscription is paused.
@@ -269,7 +276,7 @@ export interface CreemOptions {
   onSubscriptionPaused?: (
     ctx: GenericEndpointContext,
     data: FlatSubscriptionEvent<"subscription.paused">
-  ) => void;
+  ) => void | Promise<void>;
 
   /**
    * Called when a user should be granted access to the platform.
