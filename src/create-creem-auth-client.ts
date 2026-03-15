@@ -37,7 +37,8 @@ export interface CreemClient {
    * - `customer` - Customer info (defaults to session user)
    * - `metadata` - Additional metadata
    * - `requestId` - Idempotency key
-   * - `customField` - Up to 3 custom fields
+   * - `customFields` - Up to 3 custom fields for collecting additional info
+   * - `customField` - *(deprecated)* Use `customFields` instead
    *
    * @example
    * ```typescript

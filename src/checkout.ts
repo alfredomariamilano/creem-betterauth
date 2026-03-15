@@ -7,6 +7,15 @@ import { resolveSuccessUrl } from "./utils.js";
 import type { CreateCheckoutInput, CreateCheckoutResponse } from "./checkout-types.js";
 import type { CustomerRequestEntity } from "creem/models/components";
 
+const CustomFieldInputSchema = z.object({
+  type: z.enum(["text", "checkbox"]),
+  key: z.string().max(200),
+  label: z.string().max(50),
+  optional: z.boolean().optional(),
+  text: z.object({ maxLength: z.number().optional(), minLength: z.number().optional() }).optional(),
+  checkbox: z.object({ label: z.string().optional() }).optional(),
+});
+
 export const CheckoutParams = z.object({
   productId: z.string(),
   requestId: z.string().optional(),
@@ -18,7 +27,8 @@ export const CheckoutParams = z.object({
       email: z.email().optional(),
     })
     .optional(),
-  customField: z.array(z.record(z.string(), z.unknown())).max(3).optional(),
+  customFields: z.array(CustomFieldInputSchema).max(3).optional(),
+  customField: z.array(CustomFieldInputSchema).max(3).optional(),
   successUrl: z.string().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   redirect: z.boolean().optional().prefault(false).default(false),

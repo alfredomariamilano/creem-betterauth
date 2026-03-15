@@ -216,6 +216,7 @@ export async function createCheckout(
     units: input.units,
     discountCode: input.discountCode,
     customer: input.customer,
+    customFields: input.customFields ?? input.customField,
     successUrl: input.successUrl,
     metadata: {
       ...(input.metadata || {}),
@@ -406,7 +407,7 @@ export async function retrieveSubscription(
  *
  * // Server Component
  * export default async function TransactionsPage() {
- *   const { transactions } = await searchTransactions(
+ *   const { items, pagination } = await searchTransactions(
  *     {
  *       apiKey: process.env.CREEM_API_KEY!,
  *       testMode: true
@@ -417,7 +418,7 @@ export async function retrieveSubscription(
  *     }
  *   );
  *
- *   return <TransactionList transactions={transactions} />;
+ *   return <TransactionList transactions={items} />;
  * }
  * ```
  */

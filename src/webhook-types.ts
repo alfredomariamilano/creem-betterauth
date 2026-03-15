@@ -80,6 +80,45 @@ export type TransactionEntity = CreemTransactionEntity;
 export type OrderEntity = CreemOrderEntity;
 
 // ============================================================================
+// Discount Entity
+// ============================================================================
+
+export type DiscountStatus = "deleted" | "active" | "draft" | "expired" | "scheduled";
+export type DiscountType = "percentage" | "fixed";
+export type DiscountDuration = "forever" | "once" | "repeating";
+
+export interface DiscountEntity extends BaseEntity {
+  /** String representing the object's type */
+  object: "discount";
+  /** The current status of the discount */
+  status: DiscountStatus;
+  /** The name of the discount */
+  name: string;
+  /** The discount code */
+  code: string;
+  /** The type of discount */
+  type: DiscountType;
+  /** The fixed discount amount in cents (for fixed type) */
+  amount?: number;
+  /** Three-letter ISO currency code (for fixed type) */
+  currency?: string;
+  /** The percentage off (for percentage type) */
+  percentage?: number;
+  /** The expiry date of the discount */
+  expiry_date?: Date;
+  /** Maximum number of times this discount can be redeemed */
+  max_redemptions?: number;
+  /** How long the discount applies */
+  duration?: DiscountDuration;
+  /** Number of months the discount applies (for repeating duration) */
+  duration_in_months?: number;
+  /** Product IDs this discount applies to */
+  applies_to_products?: string[];
+  /** Number of times this discount has been redeemed */
+  redeem_count?: number;
+}
+
+// ============================================================================
 // License Entities
 // ============================================================================
 
@@ -180,7 +219,8 @@ export type WebhookEventType =
   | "subscription.unpaid"
   | "subscription.update"
   | "subscription.past_due"
-  | "subscription.paused";
+  | "subscription.paused"
+  | "subscription.scheduled_cancel";
 
 /**
  * Main webhook event structure (generic)
@@ -329,6 +369,16 @@ export interface SubscriptionPausedEvent {
 }
 
 /**
+ * Subscription scheduled cancel event - contains a SubscriptionEntity
+ */
+export interface SubscriptionScheduledCancelEvent {
+  eventType: "subscription.scheduled_cancel";
+  id: string;
+  created_at: number;
+  object: SubscriptionEntity;
+}
+
+/**
  * Discriminated union of all webhook events
  * Use this type for type-safe webhook handling with automatic type narrowing in switch statements
  */
@@ -344,7 +394,8 @@ export type WebhookEvent =
   | SubscriptionUnpaidEvent
   | SubscriptionUpdateEvent
   | SubscriptionPastDueEvent
-  | SubscriptionPausedEvent;
+  | SubscriptionPausedEvent
+  | SubscriptionScheduledCancelEvent;
 
 // ============================================================================
 // Normalized/Expanded Types for Webhook Events (Developer-Friendly)
@@ -559,6 +610,17 @@ export interface NormalizedSubscriptionPausedEvent {
 }
 
 /**
+ * Subscription scheduled cancel event with normalized/expanded objects.
+ * Product and customer are always full objects.
+ */
+export interface NormalizedSubscriptionScheduledCancelEvent {
+  eventType: "subscription.scheduled_cancel";
+  id: string;
+  created_at: number;
+  object: NormalizedSubscriptionEntity;
+}
+
+/**
  * Discriminated union of all normalized webhook events.
  * Use this type in your better-auth plugin options for clean, type-safe webhook handlers.
  *
@@ -577,7 +639,8 @@ export type NormalizedWebhookEvent =
   | NormalizedSubscriptionUnpaidEvent
   | NormalizedSubscriptionUpdateEvent
   | NormalizedSubscriptionPastDueEvent
-  | NormalizedSubscriptionPausedEvent;
+  | NormalizedSubscriptionPausedEvent
+  | NormalizedSubscriptionScheduledCancelEvent;
 
 // ============================================================================
 // Type Guards (Helper functions to determine object types)
@@ -594,7 +657,8 @@ export type WebhookEntity =
   | SubscriptionEntity
   | RefundEntity
   | DisputeEntity
-  | TransactionEntity;
+  | TransactionEntity
+  | DiscountEntity;
 
 /**
  * Type guard to check if an object is a valid webhook entity
@@ -613,6 +677,7 @@ export function isWebhookEntity(obj: unknown): obj is WebhookEntity {
       "refund",
       "dispute",
       "transaction",
+      "discount",
     ].includes(entity.object)
   );
 }
@@ -664,4 +729,8 @@ export function isDisputeEntity(obj: unknown): obj is DisputeEntity {
 
 export function isTransactionEntity(obj: unknown): obj is TransactionEntity {
   return obj !== null && typeof obj === "object" && "object" in obj && obj.object === "transaction";
+}
+
+export function isDiscountEntity(obj: unknown): obj is DiscountEntity {
+  return obj !== null && typeof obj === "object" && "object" in obj && obj.object === "discount";
 }
